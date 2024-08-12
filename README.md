@@ -1,0 +1,1 @@
+This project takes Nashville police call data, cleans it, and creates plots of the daily call volume from 2022 through 2024 and the location of calls on the days each year with the most number of calls and least number of calls.
