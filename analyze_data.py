@@ -1,7 +1,9 @@
 import os
 import pandas as pd
 import folium
-
+import matplotlib.pyplot as plt
+import datetime
+import numpy as np
 
 def get_calls(police_data):
   """
@@ -30,16 +32,42 @@ def get_calls(police_data):
     count_df = pd.concat([count_df, calls_df], ignore_index=True)
     # group by year and date and get sizes, find max and min for each year
   counts = count_df.groupby(['Year', 'Date']).size()
+  # Remove leap year data
+  count_df = count_df[count_df['Date'] != datetime.date(2024, 2, 29)]
   most_calls_date = counts.groupby('Year').idxmax()
   least_calls_date = counts.groupby('Year').idxmin()
-
+  count_df
   return count_df, most_calls_date, least_calls_date
 
 
-def create_plots(call_info, most_calls_date, least_calls_date):
+def create_plots(call_info):
   '''
-  This plots the call dataframes with call info, dates with most calls, and dates with least calls,
-  and plots the dates with the least number of calls.
+  This subroutine plots the call dataframes with call daily call volume over a year in a line graph
+  :param call_info: dataframe with call info
+  '''
+  # Group calls by year and date
+  daily_call_volume = call_info.groupby(['Year', 'Date']).size().unstack()
+  # Remove the year from column labels
+  daily_call_volume.columns = [date.strftime('%m/%d') for date in daily_call_volume.columns]
+  # Plotting the line plots for each year
+  for year in call_info['Year'].unique():
+    plt.plot(daily_call_volume.loc[year].index, daily_call_volume.loc[year], label=year)
+  unique_dates = daily_call_volume.columns.unique()
+  xticks_indices = [i for i in range(len(unique_dates)) if i % 21 == 0]
+
+  plt.xticks(xticks_indices, unique_dates[xticks_indices], rotation=45)
+  plt.xlabel('Date')
+  plt.ylabel('Call Volume')
+  plt.title('Daily Call Volume: 2022 - 2024')
+  plt.legend()
+  plt.show()
+  return
+
+
+def create_maps(call_info, most_calls_date, least_calls_date):
+  '''
+  This subroutine plots maps with the locations of calls on the highest and lowest call volume days
+  broken into shifts
   :param call_info: dataframe with call info
   :param most_calls_date: dataframe with dates with the most calls
   :param least_calls_date: dataframe with dates with the most calls
@@ -103,9 +131,6 @@ if __name__ == '__main__':
 
 
     # Create path variables to files
-    #police_data = [os.getcwd() + '/data/calls_2019.csv']
-    #police_data.append(os.getcwd() + '/data/calls_2020.csv')
-    #police_data.append(os.getcwd() + '/data/calls_2021.csv')
     police_data = [os.getcwd() + '/data/calls_2022.csv']
     police_data.append(os.getcwd() + '/data/calls_2023.csv')
     police_data.append(os.getcwd() + '/data/calls_2024.csv')
@@ -121,12 +146,10 @@ if __name__ == '__main__':
                        ('Hermitage', 'H'), ('Madison', 'M'), ('North Nashville', 'N'),
                        ('Oak Hill', 'H, W'), ('Old East Nashville', 'E'),
                        ('Old Hickory', 'M'), ('South Nashville', 'S'), ('West Nashville', 'W')])
-    # Determine cutoff date
-    # cutoff = (datetime.now() - timedelta(days=5 * 365)).year
-    # average housing data by sectors and filter by date
-    #housing_averages = get_housing(housing_path, nh_sectors, ind_sectors, cutoff)
 
     # get call info by sectors
     call_info, most_calls_date, least_calls_date = get_calls(police_data)
-    # create plots showing the data.
-    create_plots(call_info, most_calls_date, least_calls_date)
+    # create plots showing police calls over the year
+    create_plots(call_info)
+    # create maps showing max and min data.
+    create_maps(call_info, most_calls_date, least_calls_date)
